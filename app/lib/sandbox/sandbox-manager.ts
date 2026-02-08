@@ -190,6 +190,7 @@ async function getOrCreateSandbox(
         err
       );
       sandboxMap.delete(sessionId);
+      agentSessionMap.delete(sessionId);
     }
   }
 
@@ -198,6 +199,7 @@ async function getOrCreateSandbox(
 
   const sandbox = await Sandbox.create({
     timeoutMs: SANDBOX_TIMEOUT_MS,
+    autoPause: true,
     envs: envVars,
     metadata: { sessionId },
   });
