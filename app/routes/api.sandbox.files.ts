@@ -1,5 +1,4 @@
 import type { LoaderFunctionArgs } from "react-router";
-import { Sandbox } from "e2b";
 import { db } from "~/lib/db";
 import { sandboxes } from "~/lib/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
@@ -35,6 +34,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   }
 
   try {
+    const { Sandbox } = await import("e2b");
     const sandbox = await Sandbox.connect(sbRecord.externalId);
     const content = await sandbox.files.read(filePath, { format: "blob" });
 

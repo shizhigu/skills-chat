@@ -1,6 +1,10 @@
-import { Sandbox } from "e2b";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+
+async function getSandboxClass() {
+  const { Sandbox } = await import("e2b");
+  return Sandbox;
+}
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -69,8 +73,9 @@ export async function runAgentInSandbox(
     onEvent,
   } = opts;
 
-  // 1. Get or create sandbox
-  const sandbox = await getOrCreateSandbox(sessionId, envVars);
+  // 1. Get or create sandbox (lazy-load e2b to avoid ESM/CJS crash on Vercel)
+  const Sandbox = await getSandboxClass();
+  const sandbox = await getOrCreateSandbox(Sandbox, sessionId, envVars);
 
   // 2. Look up agentSessionId for resume
   const agentSessionId = agentSessionMap.get(sessionId) || null;
@@ -169,9 +174,10 @@ export async function runAgentInSandbox(
 // ── Sandbox lifecycle ───────────────────────────────────────────────────────
 
 async function getOrCreateSandbox(
+  Sandbox: Awaited<ReturnType<typeof getSandboxClass>>,
   sessionId: string,
   envVars: Record<string, string>
-): Promise<Sandbox> {
+) {
   // Check in-memory map for an existing sandbox
   const existingId = sandboxMap.get(sessionId);
 
@@ -243,6 +249,7 @@ export async function destroySandbox(sessionId: string): Promise<void> {
   if (!existingId) return;
 
   try {
+    const Sandbox = await getSandboxClass();
     const sandbox = await Sandbox.connect(existingId);
     await sandbox.kill();
   } catch {
