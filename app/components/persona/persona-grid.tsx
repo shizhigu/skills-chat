@@ -3,6 +3,7 @@ import { PERSONA_PRESETS } from "~/lib/personas";
 
 export interface PersonaSkillInfo {
   slug: string;
+  personaId: string | null;
   skills: Array<{
     id: string;
     slug: string;
@@ -25,6 +26,7 @@ export function PersonaGrid({ personaSkills }: PersonaGridProps) {
           <PersonaCard
             key={persona.slug}
             persona={persona}
+            personaId={match?.personaId ?? null}
             skills={match?.skills ?? []}
           />
         );

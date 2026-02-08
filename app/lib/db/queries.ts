@@ -330,6 +330,26 @@ export async function updateSkill(
   return updated;
 }
 
+export async function updatePersonaSystemPrompt(
+  personaId: string,
+  systemPrompt: string
+) {
+  const [updated] = await db
+    .update(schema.personas)
+    .set({ systemPrompt })
+    .where(eq(schema.personas.id, personaId))
+    .returning();
+  return updated;
+}
+
+export async function getPersonaSystemPrompt(personaId: string) {
+  const result = await db.query.personas.findFirst({
+    where: eq(schema.personas.id, personaId),
+    columns: { id: true, systemPrompt: true },
+  });
+  return result;
+}
+
 export async function deleteSession(sessionId: string, userId: string) {
   const [updated] = await db
     .update(schema.sessions)

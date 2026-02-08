@@ -3,7 +3,12 @@ import type { ActionFunctionArgs } from "react-router";
 import { Header } from "~/components/layout/header";
 import { Main } from "~/components/layout/main";
 import { PersonaGrid } from "~/components/persona/persona-grid";
-import { listPublicPersonas, updateSkill } from "~/lib/db/queries";
+import {
+  listPublicPersonas,
+  updateSkill,
+  getPersonaSystemPrompt,
+  updatePersonaSystemPrompt,
+} from "~/lib/db/queries";
 import { PERSONA_PRESETS } from "~/lib/personas";
 
 export async function loader() {
@@ -19,7 +24,7 @@ export async function loader() {
       category: ps.skill.category,
       icon: ps.skill.icon,
     }));
-    return { slug: preset.slug, skills };
+    return { slug: preset.slug, personaId: dbMatch?.id ?? null, skills };
   });
 
   return { personas };
@@ -48,6 +53,19 @@ export async function action({ request }: ActionFunctionArgs) {
     const description = formData.get("description") as string;
     const prompt = formData.get("prompt") as string;
     await updateSkill(skillId, { name, description, prompt });
+    return { ok: true };
+  }
+
+  if (intent === "getPersonaPrompt") {
+    const personaId = formData.get("personaId") as string;
+    const result = await getPersonaSystemPrompt(personaId);
+    return result ?? null;
+  }
+
+  if (intent === "updatePersonaPrompt") {
+    const personaId = formData.get("personaId") as string;
+    const systemPrompt = formData.get("systemPrompt") as string;
+    await updatePersonaSystemPrompt(personaId, systemPrompt);
     return { ok: true };
   }
 

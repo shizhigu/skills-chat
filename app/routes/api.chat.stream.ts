@@ -1,6 +1,5 @@
 import type { ActionFunctionArgs } from "react-router";
 import { getAuth } from "@clerk/react-router/server";
-import { assembleSystemPrompt } from "~/lib/agent/prompt-assembler";
 import { getPersonaPreset } from "~/lib/personas";
 import {
   runAgentInSandbox,
@@ -58,7 +57,7 @@ export async function action(args: ActionFunctionArgs) {
     return demoMode(persona, "请配置 E2B_API_KEY 以启用沙盒环境。");
   }
 
-  const systemPrompt = assembleSystemPrompt(persona);
+  const systemPrompt = dbPersona?.systemPrompt ?? persona.description;
   const envVars = resolveSandboxEnvVars(personaSlug);
   const model = getDefaultModel();
 

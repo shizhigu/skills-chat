@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, useFetcher } from "react-router";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
-import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
@@ -14,17 +13,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { MessageSquare, Sparkles, ChevronRight } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
+import {
+  MessageSquare,
+  Sparkles,
+  ChevronRight,
+  MoreHorizontal,
+  FileText,
+  Plug,
+} from "lucide-react";
 import type { PersonaPreset } from "~/lib/personas";
-
-const colorMap: Record<string, string> = {
-  emerald: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
-  amber: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-  violet: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
-  blue: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
-  slate: "bg-slate-100 text-slate-700 dark:bg-slate-950 dark:text-slate-300",
-  rose: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
-};
 
 const iconBgMap: Record<string, string> = {
   emerald: "bg-emerald-500",
@@ -45,13 +48,15 @@ interface SkillInfo {
 
 interface PersonaCardProps {
   persona: PersonaPreset;
+  personaId: string | null;
   skills: SkillInfo[];
 }
 
-export function PersonaCard({ persona, skills }: PersonaCardProps) {
+export function PersonaCard({ persona, personaId, skills }: PersonaCardProps) {
   const Icon = persona.icon;
   const [showSkills, setShowSkills] = useState(false);
   const [editingSkill, setEditingSkill] = useState<SkillInfo | null>(null);
+  const [showPromptEditor, setShowPromptEditor] = useState(false);
 
   return (
     <>
@@ -73,13 +78,30 @@ export function PersonaCard({ persona, skills }: PersonaCardProps) {
         </CardHeader>
         <CardContent className="pt-0">
           <div className="flex items-center justify-between">
-            <Badge
-              variant="secondary"
-              className={`cursor-pointer ${colorMap[persona.color]}`}
-              onClick={() => setShowSkills(true)}
-            >
-              {skills.length} 个技能
-            </Badge>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="size-8">
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem onClick={() => setShowSkills(true)}>
+                  <Sparkles className="mr-2 size-4" />
+                  {skills.length} Skills
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled>
+                  <Plug className="mr-2 size-4" />
+                  0 MCP
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={!personaId}
+                  onClick={() => setShowPromptEditor(true)}
+                >
+                  <FileText className="mr-2 size-4" />
+                  Edit Prompt
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button size="sm" asChild>
               <Link to={`/chat/new?persona=${persona.slug}`}>
                 <MessageSquare className="mr-1 size-3.5" />
@@ -91,11 +113,16 @@ export function PersonaCard({ persona, skills }: PersonaCardProps) {
       </Card>
 
       {/* Skills list dialog */}
-      <Dialog open={showSkills && !editingSkill} onOpenChange={(open) => !open && setShowSkills(false)}>
+      <Dialog
+        open={showSkills && !editingSkill}
+        onOpenChange={(open) => !open && setShowSkills(false)}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <div className={`flex size-8 items-center justify-center rounded-lg text-white ${iconBgMap[persona.color] ?? "bg-primary"}`}>
+              <div
+                className={`flex size-8 items-center justify-center rounded-lg text-white ${iconBgMap[persona.color] ?? "bg-primary"}`}
+              >
                 <Icon className="size-4" />
               </div>
               <div>
@@ -106,7 +133,9 @@ export function PersonaCard({ persona, skills }: PersonaCardProps) {
           </DialogHeader>
           <div className="space-y-2">
             {skills.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">暂无技能</p>
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                暂无技能
+              </p>
             ) : (
               skills.map((skill) => (
                 <button
@@ -117,7 +146,9 @@ export function PersonaCard({ persona, skills }: PersonaCardProps) {
                   <Sparkles className="size-4 shrink-0 text-primary" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{skill.name}</p>
-                    <p className="text-xs text-muted-foreground">{skill.slug}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {skill.slug}
+                    </p>
                   </div>
                   <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
                 </button>
@@ -132,6 +163,15 @@ export function PersonaCard({ persona, skills }: PersonaCardProps) {
         <SkillEditDialog
           skillId={editingSkill.id}
           onClose={() => setEditingSkill(null)}
+        />
+      )}
+
+      {/* System prompt edit dialog */}
+      {showPromptEditor && personaId && (
+        <PromptEditDialog
+          personaId={personaId}
+          personaName={persona.name}
+          onClose={() => setShowPromptEditor(false)}
         />
       )}
     </>
@@ -162,7 +202,12 @@ function SkillEditDialog({
   }
 
   // Populate form when data arrives
-  const data = loadFetcher.data as { id: string; name: string; description: string; prompt: string } | null;
+  const data = loadFetcher.data as {
+    id: string;
+    name: string;
+    description: string;
+    prompt: string;
+  } | null;
   if (data && !loaded) {
     setName(data.name);
     setDescription(data.description);
@@ -173,7 +218,11 @@ function SkillEditDialog({
   const isSaving = saveFetcher.state !== "idle";
 
   // Close on successful save
-  if (saveFetcher.data && (saveFetcher.data as { ok?: boolean }).ok && !isSaving) {
+  if (
+    saveFetcher.data &&
+    (saveFetcher.data as { ok?: boolean }).ok &&
+    !isSaving
+  ) {
     onClose();
   }
 
@@ -188,7 +237,9 @@ function SkillEditDialog({
         </DialogHeader>
 
         {!loaded ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">加载中...</div>
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            加载中...
+          </div>
         ) : (
           <saveFetcher.Form method="post" className="space-y-4">
             <input type="hidden" name="intent" value="updateSkill" />
@@ -222,6 +273,96 @@ function SkillEditDialog({
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 className="h-[40vh] resize-none overflow-y-auto font-mono text-xs"
+                style={{ fieldSizing: "fixed" }}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose}>
+                取消
+              </Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? "保存中..." : "保存"}
+              </Button>
+            </DialogFooter>
+          </saveFetcher.Form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PromptEditDialog({
+  personaId,
+  personaName,
+  onClose,
+}: {
+  personaId: string;
+  personaName: string;
+  onClose: () => void;
+}) {
+  const loadFetcher = useFetcher();
+  const saveFetcher = useFetcher();
+
+  const [systemPrompt, setSystemPrompt] = useState("");
+  const [loaded, setLoaded] = useState(false);
+
+  // Load system prompt on mount
+  if (!loaded && loadFetcher.state === "idle" && !loadFetcher.data) {
+    loadFetcher.submit(
+      { intent: "getPersonaPrompt", personaId },
+      { method: "post" }
+    );
+  }
+
+  // Populate form when data arrives
+  const data = loadFetcher.data as {
+    id: string;
+    systemPrompt: string | null;
+  } | null;
+  if (data && !loaded) {
+    setSystemPrompt(data.systemPrompt ?? "");
+    setLoaded(true);
+  }
+
+  const isSaving = saveFetcher.state !== "idle";
+
+  // Close on successful save
+  if (
+    saveFetcher.data &&
+    (saveFetcher.data as { ok?: boolean }).ok &&
+    !isSaving
+  ) {
+    onClose();
+  }
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>编辑 System Prompt — {personaName}</DialogTitle>
+          <DialogDescription>
+            修改后保存，下次对话将使用更新后的 System Prompt
+          </DialogDescription>
+        </DialogHeader>
+
+        {!loaded ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            加载中...
+          </div>
+        ) : (
+          <saveFetcher.Form method="post" className="space-y-4">
+            <input type="hidden" name="intent" value="updatePersonaPrompt" />
+            <input type="hidden" name="personaId" value={personaId} />
+
+            <div className="space-y-2">
+              <Label htmlFor="system-prompt">System Prompt</Label>
+              <Textarea
+                id="system-prompt"
+                name="systemPrompt"
+                value={systemPrompt}
+                onChange={(e) => setSystemPrompt(e.target.value)}
+                className="h-[50vh] resize-none overflow-y-auto font-mono text-xs"
                 style={{ fieldSizing: "fixed" }}
               />
             </div>
