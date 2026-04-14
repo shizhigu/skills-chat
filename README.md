@@ -1,87 +1,64 @@
-# Welcome to React Router!
+# Skills Chat
 
-A modern, production-ready template for building full-stack React applications using React Router.
+> A full-stack AI chat platform that pairs professional personas with composable skills and sandboxed code execution, powered by the Claude Agent SDK running inside E2B cloud sandboxes.
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+## What is this?
 
-## Features
+Skills Chat is a reference architecture for building domain-expert AI assistants. Users pick a professional persona (Financial Advisor, Photographer, Legal Advisor, etc.), each pre-loaded with tailored system prompts, composable skill documents, and MCP tool servers. Every conversation runs the Claude Agent SDK inside an isolated E2B sandbox with full Bash, file I/O, and code execution capabilities -- then streams results back to the browser in real time.
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+## Why?
 
-## Getting Started
+I noticed that most AI chat products treat every conversation identically -- no domain expertise, no tool access, no structured workflows. Getting expert-level output requires invisible prompt engineering that users cannot package or reuse. I built Skills Chat to separate three concerns (who the AI is, what it can do, what tools it has) into independently composable and editable units.
 
-### Installation
+## How it works
 
-Install the dependencies:
+The system has four layers: a React 19 frontend, a React Router v7 SSR server, a Neon PostgreSQL database, and E2B cloud sandboxes.
+
+1. User picks a persona and sends a message
+2. The server loads the persona's system prompt and skills from the database
+3. An E2B sandbox is created (or reconnected) for the session
+4. Skills are written as `SKILL.md` files to `~/.claude/skills/{slug}/` inside the sandbox
+5. The Claude Agent SDK's `query()` function runs with the persona's MCP server config
+6. The agent runner emits NDJSON to stdout; the server parses it into SSE events
+7. The browser renders streaming markdown via `streamdown` with CJK support
+8. Messages are persisted with full provenance (token counts, latency, cost)
+
+Sandboxes persist across messages in a session (auto-paused by E2B), so installed packages, generated files, and agent context survive between turns.
+
+## Key Technical Highlights
+
+- **Skills as filesystem artifacts**: Instead of injecting skills into the prompt (burning tokens), skills are written to the sandbox filesystem where the Claude Agent SDK discovers them naturally -- keeping prompts lean while making the full skill library available on demand.
+- **Sandbox-per-session architecture**: Each session gets a dedicated E2B sandbox that persists across messages, enabling multi-turn workflows with stateful code execution, file generation, and package installation.
+- **MCP server registry**: Each persona has a curated toolchain (financial datasets, image processing, legal search, database access) configured through a central registry and injected into the sandbox at runtime.
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | React Router v7 (SSR) |
+| UI | React 19, Tailwind CSS v4, shadcn/ui |
+| Markdown | streamdown + @streamdown/cjk |
+| Auth | Clerk |
+| Database | Neon PostgreSQL (serverless) |
+| ORM | Drizzle ORM (neon-http driver) |
+| AI | Claude Agent SDK |
+| Sandbox | E2B (cloud sandboxes) |
+| Tools | Model Context Protocol (MCP) servers |
+| Build | Vite 7, TypeScript 5.9 |
+| Runtime | Bun |
+| Container | Docker (multi-stage, oven/bun base) |
+
+## Quick Start
 
 ```bash
-npm install
+git clone https://github.com/shizhigu/skills-chat.git
+cd skills-chat
+cp .env.example .env  # add Clerk, Neon, Anthropic, E2B keys
+bun install
+bun run db:push
+bun run dev
 ```
 
-### Development
+## License
 
-Start the development server with HMR:
-
-```bash
-npm run dev
-```
-
-Your application will be available at `http://localhost:5173`.
-
-## Building for Production
-
-Create a production build:
-
-```bash
-npm run build
-```
-
-## Deployment
-
-### Docker Deployment
-
-To build and run using Docker:
-
-```bash
-docker build -t my-app .
-
-# Run the container
-docker run -p 3000:3000 my-app
-```
-
-The containerized application can be deployed to any platform that supports Docker, including:
-
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
-
-### DIY Deployment
-
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
-
-Make sure to deploy the output of `npm run build`
-
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
-```
-
-## Styling
-
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
-
----
-
-Built with ❤️ using React Router.
+MIT
